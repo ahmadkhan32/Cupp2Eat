@@ -3,12 +3,12 @@
 -- ==============================================================================
 
 -- Drop existing functions first to prevent "cannot change return type" errors
-drop function if exists public.reserve_stock(uuid, int);
-drop function if exists public.reserve_stock(uuid, integer);
-drop function if exists public.deduct_stock(uuid, int);
-drop function if exists public.deduct_stock(uuid, integer);
-drop function if exists public.release_stock(uuid, int);
-drop function if exists public.release_stock(uuid, integer);
+drop function if exists public.reserve_stock(uuid, int) cascade;
+drop function if exists public.reserve_stock(uuid, integer) cascade;
+drop function if exists public.deduct_stock(uuid, int) cascade;
+drop function if exists public.deduct_stock(uuid, integer) cascade;
+drop function if exists public.release_stock(uuid, int) cascade;
+drop function if exists public.release_stock(uuid, integer) cascade;
 
 -- Ensure inventory tables exist
 create table if not exists public.inventory (

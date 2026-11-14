@@ -291,18 +291,18 @@ create table if not exists public.audit_logs (
 );
 
 -- ==============================================================================
--- 3. DROP OLD FUNCTIONS (Prevents ERROR 42P13 return type changes)
+-- 3. DROP OLD INVENTORY FUNCTIONS (Prevents ERROR 42P13 return type changes)
+-- Note: Do NOT drop is_admin/is_super_admin as RLS policies depend on them.
+-- CREATE OR REPLACE updates their logic safely in-place without breaking policies.
 -- ==============================================================================
 
-drop function if exists public.reserve_stock(uuid, int);
-drop function if exists public.reserve_stock(uuid, integer);
-drop function if exists public.deduct_stock(uuid, int);
-drop function if exists public.deduct_stock(uuid, integer);
-drop function if exists public.release_stock(uuid, int);
-drop function if exists public.release_stock(uuid, integer);
-drop function if exists public.is_admin(uuid);
-drop function if exists public.is_super_admin(uuid);
-drop function if exists public.create_seed_user(text, text, text, text, text);
+drop function if exists public.reserve_stock(uuid, int) cascade;
+drop function if exists public.reserve_stock(uuid, integer) cascade;
+drop function if exists public.deduct_stock(uuid, int) cascade;
+drop function if exists public.deduct_stock(uuid, integer) cascade;
+drop function if exists public.release_stock(uuid, int) cascade;
+drop function if exists public.release_stock(uuid, integer) cascade;
+drop function if exists public.create_seed_user(text, text, text, text, text) cascade;
 
 -- ==============================================================================
 -- 4. CREATE FUNCTIONS & TRIGGERS
