@@ -540,6 +540,19 @@ on conflict (code) do nothing;
 -- 7. USER PROVISIONING FUNCTION & SEED ACCOUNTS (Bulletproof GoTrue Auth)
 -- ==============================================================================
 
+-- Clean up any NULL string values in auth.users to prevent GoTrue 500 error
+update auth.users
+set 
+  confirmation_token = coalesce(confirmation_token, ''),
+  recovery_token = coalesce(recovery_token, ''),
+  email_change_token_new = coalesce(email_change_token_new, ''),
+  email_change = coalesce(email_change, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  reauthentication_token = coalesce(reauthentication_token, ''),
+  phone = coalesce(phone, ''),
+  phone_change = coalesce(phone_change, ''),
+  phone_change_token = coalesce(phone_change_token, '');
+
 create or replace function public.create_seed_user(
   user_email text,
   user_password text,
@@ -560,7 +573,7 @@ begin
 
   encrypted_pw := crypt(user_password, gen_salt('bf'));
 
-  -- 2. Insert into auth.users
+  -- 2. Insert into auth.users with empty strings for all Go string fields (MANDATORY for GoTrue)
   insert into auth.users (
     instance_id,
     id,
@@ -577,6 +590,13 @@ begin
     updated_at,
     confirmation_token,
     recovery_token,
+    email_change_token_new,
+    email_change,
+    email_change_token_current,
+    reauthentication_token,
+    phone,
+    phone_change,
+    phone_change_token,
     email_change_confirm_status,
     is_sso_user,
     is_anonymous
@@ -594,8 +614,15 @@ begin
     false,
     now(),
     now(),
-    encode(gen_random_bytes(32), 'hex'),
-    encode(gen_random_bytes(32), 'hex'),
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     0,
     false,
     false

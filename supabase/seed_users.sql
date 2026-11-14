@@ -1,11 +1,23 @@
 -- ==============================================================================
--- CUP2EAT SEED USERS & CREDENTIALS SCRIPT (Bulletproof GoTrue Auth)
+-- CUP2EAT SEED USERS & CREDENTIALS SCRIPT (100% Non-Null GoTrue String Fields)
 -- Run this in Supabase Dashboard > SQL Editor
--- It cleans up any corrupted records and provisions all default users
--- with auth.identities so logins work with 100% reliability.
+-- Resolves "Database error querying schema" and sets up all accounts.
 -- ==============================================================================
 
 create extension if not exists "pgcrypto";
+
+-- Clean up any NULL string values in auth.users
+update auth.users
+set 
+  confirmation_token = coalesce(confirmation_token, ''),
+  recovery_token = coalesce(recovery_token, ''),
+  email_change_token_new = coalesce(email_change_token_new, ''),
+  email_change = coalesce(email_change, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  reauthentication_token = coalesce(reauthentication_token, ''),
+  phone = coalesce(phone, ''),
+  phone_change = coalesce(phone_change, ''),
+  phone_change_token = coalesce(phone_change_token, '');
 
 create or replace function public.create_seed_user(
   user_email text,
@@ -27,7 +39,7 @@ begin
 
   encrypted_pw := crypt(user_password, gen_salt('bf'));
 
-  -- 2. Insert into auth.users
+  -- 2. Insert into auth.users with empty strings for all Go string fields
   insert into auth.users (
     instance_id,
     id,
@@ -44,6 +56,13 @@ begin
     updated_at,
     confirmation_token,
     recovery_token,
+    email_change_token_new,
+    email_change,
+    email_change_token_current,
+    reauthentication_token,
+    phone,
+    phone_change,
+    phone_change_token,
     email_change_confirm_status,
     is_sso_user,
     is_anonymous
@@ -61,14 +80,21 @@ begin
     false,
     now(),
     now(),
-    encode(gen_random_bytes(32), 'hex'),
-    encode(gen_random_bytes(32), 'hex'),
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
     0,
     false,
     false
   );
 
-  -- 3. Insert into auth.identities (GoTrue compatible across versions)
+  -- 3. Insert into auth.identities
   if exists (
     select 1 from information_schema.columns
     where table_schema = 'auth' and table_name = 'identities' and column_name = 'provider_id'
@@ -102,11 +128,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- ==============================================================================
--- 1. SUPER ADMIN (Founder / Owner Account)
--- Email: ahmadkhan32@cup2eat.com
--- Password: Admin@Cup2Eat2026
--- ==============================================================================
+-- Super Admin
 select public.create_seed_user(
   'ahmadkhan32@cup2eat.com',
   'Admin@Cup2Eat2026',
@@ -115,11 +137,7 @@ select public.create_seed_user(
   'CUP2EAT Corporate HQ'
 );
 
--- ==============================================================================
--- 2. ORGANIZATION ADMIN (Regional Operations Hub)
--- Email: mumbai.ops@cup2eat.com
--- Password: OrgAdmin@Cup2Eat2026
--- ==============================================================================
+-- Org Admins
 select public.create_seed_user(
   'mumbai.ops@cup2eat.com',
   'OrgAdmin@Cup2Eat2026',
@@ -136,11 +154,7 @@ select public.create_seed_user(
   'Northern Regional Hub'
 );
 
--- ==============================================================================
--- 3. OPERATIONS ADMIN (Catalog & Stock Lead)
--- Email: sunil.inventory@cup2eat.com
--- Password: OpsAdmin@Cup2Eat2026
--- ==============================================================================
+-- Operations Admin
 select public.create_seed_user(
   'sunil.inventory@cup2eat.com',
   'OpsAdmin@Cup2Eat2026',
@@ -149,11 +163,7 @@ select public.create_seed_user(
   'Maharashtra Operations Hub'
 );
 
--- ==============================================================================
--- 4. TEST CUSTOMER ACCOUNT
--- Email: customer@cup2eat.com
--- Password: Customer@Cup2Eat2026
--- ==============================================================================
+-- Test Customer
 select public.create_seed_user(
   'customer@cup2eat.com',
   'Customer@Cup2Eat2026',
