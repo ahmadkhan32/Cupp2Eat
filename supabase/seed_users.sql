@@ -153,3 +153,4 @@ select public.create_seed_user(
   'customer',
   null
 );
+
