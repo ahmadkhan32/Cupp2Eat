@@ -3,7 +3,11 @@ import './globals.css';
 import { Toaster } from 'react-hot-toast';
 import ReduxProvider from '@/store/ReduxProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+});
 
 export const metadata = {
   title: 'CUP2EAT – Eat Your Drink!',
