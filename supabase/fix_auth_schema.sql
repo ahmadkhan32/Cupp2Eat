@@ -69,6 +69,9 @@ begin
   if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
     update auth.users set email_change_token = coalesce(email_change_token, '');
   end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'identities' and column_name = 'email' and is_generated = 'NEVER') then
+    update auth.identities set email = coalesce(email, identity_data->>'email', '') where email is null;
+  end if;
 end $$;
 
 -- Step 3: Recreate provisioning function with 100% compliant GoTrue fields
@@ -159,13 +162,22 @@ begin
   ) then
     execute format(
       'insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at) values (%L, %L, %L, %L, %L, now(), now(), now())',
-      new_user_id, new_user_id, jsonb_build_object('sub', new_user_id::text, 'email', user_email, 'email_verified', true, 'phone_verified', false), 'email', new_user_id::text
+      new_user_id, new_user_id, jsonb_build_object('sub', new_user_id::text, 'email', user_email, 'email_verified', true, 'phone_verified', false, 'full_name', user_name, 'role', user_role), 'email', new_user_id::text
     );
   else
     execute format(
       'insert into auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) values (%L, %L, %L, %L, now(), now(), now())',
-      new_user_id::text, new_user_id, jsonb_build_object('sub', new_user_id::text, 'email', user_email, 'email_verified', true, 'phone_verified', false), 'email'
+      new_user_id::text, new_user_id, jsonb_build_object('sub', new_user_id::text, 'email', user_email, 'email_verified', true, 'phone_verified', false, 'full_name', user_name, 'role', user_role), 'email'
     );
+  end if;
+
+  -- Ensure identities.email is populated if it is a writable column
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'auth' and table_name = 'identities' and column_name = 'email'
+    and is_generated = 'NEVER'
+  ) then
+    execute format('update auth.identities set email = %L where user_id = %L', user_email, new_user_id);
   end if;
 
   -- 4. Insert profile
@@ -210,5 +222,8 @@ do $$
 begin
   if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
     update auth.users set email_change_token = coalesce(email_change_token, '');
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'identities' and column_name = 'email' and is_generated = 'NEVER') then
+    update auth.identities set email = coalesce(email, identity_data->>'email', '') where email is null;
   end if;
 end $$;
