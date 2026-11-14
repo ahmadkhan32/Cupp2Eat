@@ -22,3 +22,15 @@
 - **Cart & Checkout**: Real-time quantity management, coupon discounts, Indian PIN code verification, Razorpay integration.
 - **Admin Suite**: Dashboard analytics, product CRUD, inventory health, courier tracking updates, PDF tax invoice generation.
 - **Security**: PostgreSQL Row Level Security (RLS), HMAC SHA256 payment signature verification, sanitized inputs.
+
+## 4. Default Seed Logins & Credentials
+
+| Role | Name / Hub | Email | Default Password | Portal URL |
+|---|---|---|---|---|
+| **Super Admin** | Ahmad Khan (Founder) | `ahmadkhan32@cup2eat.com` | `Admin@Cup2Eat2026` | `/admin/login` |
+| **Organization Admin** | Mumbai Regional Hub | `mumbai.ops@cup2eat.com` | `OrgAdmin@Cup2Eat2026` | `/admin/login` |
+| **Organization Admin** | Delhi Regional Hub | `delhi.admin@cup2eat.com` | `OrgAdmin@Cup2Eat2026` | `/admin/login` |
+| **Operations Admin** | Sunil Mehta (Inventory) | `sunil.inventory@cup2eat.com` | `OpsAdmin@Cup2Eat2026` | `/admin/login` |
+| **Customer** | Priya Sharma (Test User) | `customer@cup2eat.com` | `Customer@Cup2Eat2026` | `/login` |
+
+*To seed these users into Supabase, execute `supabase/seed_users.sql` in the Supabase SQL Editor.*
