@@ -541,6 +541,7 @@ on conflict (code) do nothing;
 -- ==============================================================================
 
 -- Clean up any NULL string values in auth.users to prevent GoTrue 500 error
+-- Note: phone, phone_change, and phone_change_token MUST be NULL to prevent unique constraint violation on users_phone_key
 update auth.users
 set 
   confirmation_token = coalesce(confirmation_token, ''),
@@ -549,9 +550,9 @@ set
   email_change = coalesce(email_change, ''),
   email_change_token_current = coalesce(email_change_token_current, ''),
   reauthentication_token = coalesce(reauthentication_token, ''),
-  phone = coalesce(phone, ''),
-  phone_change = coalesce(phone_change, ''),
-  phone_change_token = coalesce(phone_change_token, '');
+  phone = null,
+  phone_change = null,
+  phone_change_token = null;
 
 create or replace function public.create_seed_user(
   user_email text,
@@ -620,9 +621,9 @@ begin
     '',
     '',
     '',
-    '',
-    '',
-    '',
+    null,
+    null,
+    null,
     0,
     false,
     false

@@ -5,6 +5,7 @@
 -- ==============================================================================
 
 -- Step 1: Immediately sanitize all existing records so GoTrue scanner never encounters NULL strings
+-- Note: phone, phone_change, and phone_change_token MUST be NULL to prevent unique constraint violation on users_phone_key
 update auth.users
 set 
   confirmation_token = coalesce(confirmation_token, ''),
@@ -13,9 +14,9 @@ set
   email_change = coalesce(email_change, ''),
   email_change_token_current = coalesce(email_change_token_current, ''),
   reauthentication_token = coalesce(reauthentication_token, ''),
-  phone = coalesce(phone, ''),
-  phone_change = coalesce(phone_change, ''),
-  phone_change_token = coalesce(phone_change_token, '');
+  phone = null,
+  phone_change = null,
+  phone_change_token = null;
 
 -- Step 2: Clean up any half-baked seed users
 delete from auth.identities where identity_data->>'email' in (
@@ -113,9 +114,9 @@ begin
     '',
     '',
     '',
-    '',
-    '',
-    '',
+    null,
+    null,
+    null,
     0,
     false,
     false
@@ -171,6 +172,7 @@ set
   email_change = coalesce(email_change, ''),
   email_change_token_current = coalesce(email_change_token_current, ''),
   reauthentication_token = coalesce(reauthentication_token, ''),
-  phone = coalesce(phone, ''),
-  phone_change = coalesce(phone_change, ''),
-  phone_change_token = coalesce(phone_change_token, '');
+  phone = null,
+  phone_change = null,
+  phone_change_token = null;
+
