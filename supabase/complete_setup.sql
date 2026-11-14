@@ -1,8 +1,8 @@
 -- ==============================================================================
--- CUP2EAT COMPLETE ALL-IN-ONE SUPABASE SETUP SCRIPT
+-- CUP2EAT COMPLETE ALL-IN-ONE SUPABASE SETUP SCRIPT (100% Idempotent)
 -- Paste this entire script into your Supabase Dashboard > SQL Editor and click RUN.
--- It configures all tables, indexes, functions, triggers, RLS policies,
--- sample product catalog (valid UUIDs), and pre-confirmed admin & test users.
+-- Sets up all extensions, tables, indexes, stock functions, RLS policies,
+-- sample product catalog, and pre-confirmed administrative & customer accounts.
 -- ==============================================================================
 
 -- 1. Enable Required Extensions
@@ -13,7 +13,6 @@ create extension if not exists "pgcrypto";
 -- 2. CREATE SCHEMAS & TABLES
 -- ==============================================================================
 
--- Profiles (Extends auth.users)
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
@@ -27,7 +26,6 @@ create table if not exists public.profiles (
 );
 create index if not exists profiles_email_idx on public.profiles(email);
 
--- User Roles (RBAC: super_admin, org_admin, admin, customer)
 create table if not exists public.user_roles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -41,7 +39,6 @@ create table if not exists public.user_roles (
 create index if not exists user_roles_user_idx on public.user_roles(user_id);
 create index if not exists user_roles_role_idx on public.user_roles(role);
 
--- Categories
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -55,7 +52,6 @@ create table if not exists public.categories (
 );
 create index if not exists categories_slug_idx on public.categories(slug);
 
--- Products
 create table if not exists public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -76,7 +72,6 @@ create index if not exists products_slug_idx on public.products(slug);
 create index if not exists products_category_idx on public.products(category_id);
 create index if not exists products_featured_idx on public.products(is_featured);
 
--- Product Images
 create table if not exists public.product_images (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.products(id) on delete cascade,
@@ -88,7 +83,6 @@ create table if not exists public.product_images (
 );
 create index if not exists product_images_product_idx on public.product_images(product_id);
 
--- Product Variants
 create table if not exists public.product_variants (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.products(id) on delete cascade,
@@ -104,7 +98,6 @@ create table if not exists public.product_variants (
 );
 create index if not exists product_variants_product_idx on public.product_variants(product_id);
 
--- Inventory
 create table if not exists public.inventory (
   id uuid primary key default gen_random_uuid(),
   variant_id uuid unique not null references public.product_variants(id) on delete cascade,
@@ -114,7 +107,6 @@ create table if not exists public.inventory (
   updated_at timestamptz default now()
 );
 
--- Inventory Movements Audit
 create table if not exists public.inventory_movements (
   id uuid primary key default gen_random_uuid(),
   variant_id uuid not null references public.product_variants(id) on delete cascade,
@@ -125,7 +117,6 @@ create table if not exists public.inventory_movements (
   created_at timestamptz default now()
 );
 
--- Carts
 create table if not exists public.carts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
@@ -135,7 +126,6 @@ create table if not exists public.carts (
 );
 create index if not exists carts_user_idx on public.carts(user_id);
 
--- Cart Items
 create table if not exists public.cart_items (
   id uuid primary key default gen_random_uuid(),
   cart_id uuid not null references public.carts(id) on delete cascade,
@@ -148,7 +138,6 @@ create table if not exists public.cart_items (
 );
 create index if not exists cart_items_cart_idx on public.cart_items(cart_id);
 
--- Customer Addresses
 create table if not exists public.addresses (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -165,7 +154,6 @@ create table if not exists public.addresses (
 );
 create index if not exists addresses_user_idx on public.addresses(user_id);
 
--- Orders
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   order_number text unique not null,
@@ -190,7 +178,6 @@ create index if not exists orders_customer_idx on public.orders(customer_id);
 create index if not exists orders_number_idx on public.orders(order_number);
 create index if not exists orders_status_idx on public.orders(order_status);
 
--- Order Items
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
@@ -206,7 +193,6 @@ create table if not exists public.order_items (
 );
 create index if not exists order_items_order_idx on public.order_items(order_id);
 
--- Payments
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
@@ -225,7 +211,6 @@ create table if not exists public.payments (
 create index if not exists payments_order_idx on public.payments(order_id);
 create index if not exists payments_rzp_order_idx on public.payments(razorpay_order_id);
 
--- Invoices
 create table if not exists public.invoices (
   id uuid primary key default gen_random_uuid(),
   invoice_number text unique not null,
@@ -240,7 +225,6 @@ create table if not exists public.invoices (
 );
 create index if not exists invoices_order_idx on public.invoices(order_id);
 
--- Shipments
 create table if not exists public.shipments (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
@@ -255,7 +239,6 @@ create table if not exists public.shipments (
 );
 create index if not exists shipments_order_idx on public.shipments(order_id);
 
--- Coupons
 create table if not exists public.coupons (
   id uuid primary key default gen_random_uuid(),
   code text unique not null,
@@ -273,7 +256,6 @@ create table if not exists public.coupons (
 );
 create index if not exists coupons_code_idx on public.coupons(code);
 
--- Reviews
 create table if not exists public.reviews (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.products(id) on delete cascade,
@@ -288,7 +270,6 @@ create table if not exists public.reviews (
 );
 create index if not exists reviews_product_idx on public.reviews(product_id);
 
--- Notifications
 create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -301,7 +282,6 @@ create table if not exists public.notifications (
 );
 create index if not exists notifications_user_idx on public.notifications(user_id);
 
--- Audit Logs
 create table if not exists public.audit_logs (
   id uuid primary key default gen_random_uuid(),
   action text not null,
@@ -311,10 +291,23 @@ create table if not exists public.audit_logs (
 );
 
 -- ==============================================================================
--- 3. FUNCTIONS & TRIGGERS
+-- 3. DROP OLD FUNCTIONS (Prevents ERROR 42P13 return type changes)
 -- ==============================================================================
 
--- Helper security functions for RBAC
+drop function if exists public.reserve_stock(uuid, int);
+drop function if exists public.reserve_stock(uuid, integer);
+drop function if exists public.deduct_stock(uuid, int);
+drop function if exists public.deduct_stock(uuid, integer);
+drop function if exists public.release_stock(uuid, int);
+drop function if exists public.release_stock(uuid, integer);
+drop function if exists public.is_admin(uuid);
+drop function if exists public.is_super_admin(uuid);
+drop function if exists public.create_seed_user(text, text, text, text, text);
+
+-- ==============================================================================
+-- 4. CREATE FUNCTIONS & TRIGGERS
+-- ==============================================================================
+
 create or replace function public.is_admin(user_id uuid)
 returns boolean as $$
   select exists (
@@ -331,7 +324,6 @@ returns boolean as $$
   );
 $$ language sql security definer;
 
--- Trigger to auto-create profile on signup
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -362,7 +354,6 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Concurrency safe stock functions
 create or replace function public.reserve_stock(p_variant_id uuid, p_quantity int)
 returns boolean as $$
 declare
@@ -407,7 +398,7 @@ end;
 $$ language plpgsql security definer;
 
 -- ==============================================================================
--- 4. ROW LEVEL SECURITY (RLS) POLICIES
+-- 5. ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
 
 alter table if exists public.profiles enable row level security;
@@ -500,10 +491,9 @@ drop policy if exists "Super admins manage roles" on public.user_roles;
 create policy "Super admins manage roles" on public.user_roles for all using (public.is_super_admin(auth.uid()));
 
 -- ==============================================================================
--- 5. SEED CATALOG DATA (Valid RFC 4122 Hexadecimal UUIDs)
+-- 6. SEED CATALOG DATA (Valid RFC 4122 Hexadecimal UUIDs)
 -- ==============================================================================
 
--- Categories
 insert into public.categories (id, name, slug, description, image_url, sort_order) values
 ('c0000000-0000-0000-0000-000000000001', 'Cup Noodles', 'cup-noodles', 'Gourmet artisan instant cup noodles with aromatic Indian broths', '/logo/cup2eat-logo.png', 1),
 ('c0000000-0000-0000-0000-000000000002', 'Cup Soups', 'cup-soups', 'Wholesome comforting herbal and vegetable soups in insulated cups', '/logo/cup2eat-logo.png', 2),
@@ -514,7 +504,6 @@ set name = excluded.name,
     slug = excluded.slug, 
     description = excluded.description;
 
--- Products (Valid Hex UUIDs: b0000000-...)
 insert into public.products (id, name, slug, category_id, base_price, sale_price, is_featured, is_published, rating, reviews_count) values
 ('b0000000-0000-0000-0000-000000000001', 'Masala Magic Cup Noodles', 'masala-magic-cup-noodles', 'c0000000-0000-0000-0000-000000000001', 149.00, 119.00, true, true, 4.8, 48),
 ('b0000000-0000-0000-0000-000000000002', 'Creamy Tomato Basil Soup Cup', 'creamy-tomato-basil-soup-cup', 'c0000000-0000-0000-0000-000000000002', 129.00, 99.00, false, true, 4.6, 22),
@@ -527,7 +516,6 @@ set name = excluded.name,
     base_price = excluded.base_price, 
     sale_price = excluded.sale_price;
 
--- Product Variants (Valid Hex UUIDs: d0000000-...)
 insert into public.product_variants (id, product_id, name, sku, flavour, size, price_adjustment) values
 ('d0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Extra Spicy Masala', 'C2E-MSL-SPY', 'Extra Spicy', 'Regular 90g', 0.00),
 ('d0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'Mild Herb Masala', 'C2E-MSL-MLD', 'Mild Herb', 'Regular 90g', 0.00),
@@ -536,7 +524,6 @@ on conflict (id) do update
 set name = excluded.name, 
     sku = excluded.sku;
 
--- Inventory
 insert into public.inventory (variant_id, quantity, reserved_quantity, low_stock_threshold) values
 ('d0000000-0000-0000-0000-000000000001', 60, 2, 10),
 ('d0000000-0000-0000-0000-000000000002', 45, 0, 10),
@@ -544,14 +531,13 @@ insert into public.inventory (variant_id, quantity, reserved_quantity, low_stock
 on conflict (variant_id) do update 
 set quantity = excluded.quantity;
 
--- Coupons
 insert into public.coupons (code, description, discount_type, discount_value, min_order_amount, max_uses, is_active) values
 ('WELCOME10', '10% Welcome Discount for New Foodies', 'percentage', 10.00, 199.00, 1000, true),
 ('CUPFEST50', 'Flat ₹50 OFF on Orders above ₹399', 'fixed', 50.00, 399.00, 500, true)
 on conflict (code) do nothing;
 
 -- ==============================================================================
--- 6. USER PROVISIONING FUNCTION & SEED ACCOUNTS (Bulletproof GoTrue Auth)
+-- 7. USER PROVISIONING FUNCTION & SEED ACCOUNTS (Bulletproof GoTrue Auth)
 -- ==============================================================================
 
 create or replace function public.create_seed_user(
@@ -649,7 +635,7 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Provision Super Admin (Founder)
+-- 1. Super Admin (Founder)
 select public.create_seed_user(
   'ahmadkhan32@cup2eat.com',
   'Admin@Cup2Eat2026',
@@ -658,7 +644,7 @@ select public.create_seed_user(
   'CUP2EAT Corporate HQ'
 );
 
--- Provision Org Admins
+-- 2. Org Admins
 select public.create_seed_user(
   'mumbai.ops@cup2eat.com',
   'OrgAdmin@Cup2Eat2026',
@@ -675,7 +661,7 @@ select public.create_seed_user(
   'Northern Regional Hub'
 );
 
--- Provision Operations Admin
+-- 3. Operations Admin
 select public.create_seed_user(
   'sunil.inventory@cup2eat.com',
   'OpsAdmin@Cup2Eat2026',
@@ -684,7 +670,7 @@ select public.create_seed_user(
   'Maharashtra Operations Hub'
 );
 
--- Provision Test Customer
+-- 4. Test Customer
 select public.create_seed_user(
   'customer@cup2eat.com',
   'Customer@Cup2Eat2026',
@@ -692,4 +678,3 @@ select public.create_seed_user(
   'customer',
   null
 );
-

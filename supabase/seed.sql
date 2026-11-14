@@ -1,6 +1,75 @@
 -- ==============================================================================
--- CUP2EAT SEED DATA (Valid RFC 4122 Hexadecimal UUIDs)
+-- CUP2EAT SEED DATA (Valid RFC 4122 Hexadecimal UUIDs & Self-Healing Tables)
 -- ==============================================================================
+
+-- 0. Ensure prerequisite tables exist
+create table if not exists public.categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique not null,
+  description text,
+  image_url text,
+  is_active boolean default true,
+  sort_order int default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.products (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique not null,
+  description text,
+  category_id uuid references public.categories(id) on delete set null,
+  base_price numeric(12,2) not null,
+  sale_price numeric(12,2),
+  currency text default 'INR',
+  is_featured boolean default false,
+  is_published boolean default true,
+  rating numeric(3,2) default 5.0,
+  reviews_count int default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.product_variants (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete cascade,
+  name text not null,
+  sku text unique not null,
+  flavour text,
+  size text,
+  weight_grams int,
+  price_adjustment numeric(12,2) default 0,
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.inventory (
+  id uuid primary key default gen_random_uuid(),
+  variant_id uuid unique not null references public.product_variants(id) on delete cascade,
+  quantity int not null default 0,
+  reserved_quantity int not null default 0,
+  low_stock_threshold int default 10,
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.coupons (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  description text,
+  discount_type text not null check (discount_type in ('percentage', 'fixed')),
+  discount_value numeric(12,2) not null,
+  min_order_amount numeric(12,2) default 0,
+  max_discount_amount numeric(12,2),
+  max_uses int,
+  uses_count int default 0,
+  valid_from timestamptz default now(),
+  valid_until timestamptz,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
 
 -- 1. Insert Initial Categories (c0000000-...)
 insert into public.categories (id, name, slug, description, image_url, sort_order) values
