@@ -603,9 +603,6 @@ begin
   if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
     update auth.users set email_change_token = coalesce(email_change_token, '');
   end if;
-  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
-    update auth.users set confirmed_at = coalesce(confirmed_at, email_confirmed_at, now());
-  end if;
 end $$;
 
 create or replace function public.create_seed_user(
@@ -683,9 +680,6 @@ begin
     false
   );
 
-  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
-    execute format('update auth.users set confirmed_at = now() where id = %L', new_user_id);
-  end if;
   if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
     execute format('update auth.users set email_change_token = '''' where id = %L', new_user_id);
   end if;
@@ -785,8 +779,5 @@ do $$
 begin
   if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
     update auth.users set email_change_token = coalesce(email_change_token, '');
-  end if;
-  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
-    update auth.users set confirmed_at = coalesce(confirmed_at, email_confirmed_at, now());
   end if;
 end $$;
