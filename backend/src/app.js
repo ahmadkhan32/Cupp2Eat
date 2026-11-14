@@ -12,10 +12,33 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = [
+  FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:4000',
+  'https://backend-rpv5-git-main-ahmads-projects-3635a9cd.vercel.app',
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [FRONTEND_URL, 'http://localhost:3000', 'https://cupp2eat.vercel.app'],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return callback(null, true);
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'apikey',
+      'x-client-info',
+    ],
+    exposedHeaders: ['Set-Cookie'],
   })
 );
 
