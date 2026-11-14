@@ -577,22 +577,6 @@ delete from public.profiles where email in (
   'customer@cup2eat.com'
 );
 
-do $$
-begin
-  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'carts') then
-    delete from public.carts where user_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
-  end if;
-  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'inventory_audit_log') then
-    update public.inventory_audit_log set created_by = null where created_by in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
-  end if;
-  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'invoices') then
-    update public.invoices set customer_id = null where customer_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
-  end if;
-  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'notifications') then
-    delete from public.notifications where user_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
-  end if;
-end $$;
-
 delete from auth.users where email in (
   'ahmadkhan32@cup2eat.com',
   'mumbai.ops@cup2eat.com',
