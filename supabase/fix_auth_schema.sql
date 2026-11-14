@@ -4,27 +4,25 @@
 -- Cause: Supabase GoTrue Auth crashes when string columns in auth.users are NULL.
 -- ==============================================================================
 
--- Step 1: Immediately sanitize all existing records so GoTrue scanner never encounters NULL strings
--- Note: phone, phone_change, and phone_change_token MUST be NULL to prevent unique constraint violation on users_phone_key
-update auth.users
-set 
-  confirmation_token = coalesce(confirmation_token, ''),
-  recovery_token = coalesce(recovery_token, ''),
-  email_change_token_new = coalesce(email_change_token_new, ''),
-  email_change = coalesce(email_change, ''),
-  email_change_token_current = coalesce(email_change_token_current, ''),
-  reauthentication_token = coalesce(reauthentication_token, ''),
-  phone = null,
-  phone_change = null,
-  phone_change_token = null;
+create extension if not exists "pgcrypto";
 
--- Step 2: Clean up any half-baked seed users
+-- Step 1: Clean up any foreign key references & broken seed accounts
 delete from auth.identities where identity_data->>'email' in (
   'ahmadkhan32@cup2eat.com',
   'mumbai.ops@cup2eat.com',
   'delhi.admin@cup2eat.com',
   'sunil.inventory@cup2eat.com',
   'customer@cup2eat.com'
+);
+
+delete from auth.identities where user_id in (
+  select id from auth.users where email in (
+    'ahmadkhan32@cup2eat.com',
+    'mumbai.ops@cup2eat.com',
+    'delhi.admin@cup2eat.com',
+    'sunil.inventory@cup2eat.com',
+    'customer@cup2eat.com'
+  )
 );
 
 delete from public.user_roles where user_id in (
@@ -45,6 +43,23 @@ delete from public.profiles where email in (
   'customer@cup2eat.com'
 );
 
+-- Safely clear optional references in other tables if they exist
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'carts') then
+    delete from public.carts where user_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'inventory_audit_log') then
+    update public.inventory_audit_log set created_by = null where created_by in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'invoices') then
+    update public.invoices set customer_id = null where customer_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
+  end if;
+  if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'notifications') then
+    delete from public.notifications where user_id in (select id from auth.users where email in ('ahmadkhan32@cup2eat.com','mumbai.ops@cup2eat.com','delhi.admin@cup2eat.com','sunil.inventory@cup2eat.com','customer@cup2eat.com'));
+  end if;
+end $$;
+
 delete from auth.users where email in (
   'ahmadkhan32@cup2eat.com',
   'mumbai.ops@cup2eat.com',
@@ -53,7 +68,30 @@ delete from auth.users where email in (
   'customer@cup2eat.com'
 );
 
--- Step 3: Recreate provisioning function with 100% non-null GoTrue fields
+-- Step 2: Sanitize all remaining records so GoTrue scanner never encounters NULL strings
+update auth.users
+set 
+  confirmation_token = coalesce(confirmation_token, ''),
+  recovery_token = coalesce(recovery_token, ''),
+  email_change_token_new = coalesce(email_change_token_new, ''),
+  email_change = coalesce(email_change, ''),
+  email_change_token_current = coalesce(email_change_token_current, ''),
+  reauthentication_token = coalesce(reauthentication_token, ''),
+  phone = null,
+  phone_change = null,
+  phone_change_token = null;
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
+    update auth.users set email_change_token = coalesce(email_change_token, '');
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
+    update auth.users set confirmed_at = coalesce(confirmed_at, email_confirmed_at, now());
+  end if;
+end $$;
+
+-- Step 3: Recreate provisioning function with 100% compliant GoTrue fields
 create or replace function public.create_seed_user(
   user_email text,
   user_password text,
@@ -65,9 +103,16 @@ declare
   new_user_id uuid := gen_random_uuid();
   encrypted_pw text;
 begin
+  -- 1. Clean up old/broken records for this email
+  delete from auth.identities where identity_data->>'email' = user_email;
+  delete from auth.identities where user_id in (select id from auth.users where email = user_email);
+  delete from public.user_roles where user_id in (select id from auth.users where email = user_email);
+  delete from public.profiles where email = user_email;
+  delete from auth.users where email = user_email;
+
   encrypted_pw := crypt(user_password, gen_salt('bf'));
 
-  -- Insert into auth.users with empty strings for all Go string fields (MANDATORY for GoTrue)
+  -- 2. Insert into auth.users with empty strings for all Go string fields (MANDATORY for GoTrue)
   insert into auth.users (
     instance_id,
     id,
@@ -122,7 +167,15 @@ begin
     false
   );
 
-  -- Insert into auth.identities
+  -- Handle confirmed_at and email_change_token if present in this schema
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
+    execute format('update auth.users set confirmed_at = now() where id = %L', new_user_id);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
+    execute format('update auth.users set email_change_token = '''' where id = %L', new_user_id);
+  end if;
+
+  -- 3. Insert into auth.identities
   if exists (
     select 1 from information_schema.columns
     where table_schema = 'auth' and table_name = 'identities' and column_name = 'provider_id'
@@ -138,14 +191,14 @@ begin
     );
   end if;
 
-  -- Insert profile
+  -- 4. Insert profile
   insert into public.profiles (id, full_name, email, organization_name)
   values (new_user_id, user_name, user_email, user_org)
   on conflict (id) do update
   set full_name = excluded.full_name,
       organization_name = excluded.organization_name;
 
-  -- Insert role
+  -- 5. Insert role
   insert into public.user_roles (user_id, role, organization_name)
   values (new_user_id, user_role, user_org)
   on conflict (user_id) do update
@@ -176,3 +229,12 @@ set
   phone_change = null,
   phone_change_token = null;
 
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'email_change_token') then
+    update auth.users set email_change_token = coalesce(email_change_token, '');
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = 'confirmed_at') then
+    update auth.users set confirmed_at = coalesce(confirmed_at, email_confirmed_at, now());
+  end if;
+end $$;
