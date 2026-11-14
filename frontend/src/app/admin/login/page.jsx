@@ -25,19 +25,24 @@ export default function AdminLoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Verify admin role server-side
-      const res = await api.get('/auth/me', {
-        headers: { Authorization: `Bearer ${data.session.access_token}` },
-      });
+      // Verify admin role directly from Supabase
+      let role = data.user?.user_metadata?.role;
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .single();
+        if (roleData?.role) role = roleData.role;
+      } catch (_) {}
 
-      const role = res.data.user?.role;
       if (!['super_admin', 'org_admin', 'admin'].includes(role)) {
         await supabase.auth.signOut();
         toast.error('Access denied. This portal is for administrators only.');
         return;
       }
 
-      toast.success(`Welcome, ${res.data.user?.full_name || 'Admin'}!`);
+      toast.success(`Welcome, ${data.user?.user_metadata?.full_name || 'Admin'}!`);
       router.push('/admin/dashboard');
     } catch (err) {
       toast.error(err.message || 'Admin login failed');
