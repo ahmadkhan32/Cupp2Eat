@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { checkoutSchema } from '@/schemas/auth';
@@ -15,6 +16,12 @@ export default function CheckoutPage() {
   const router = useRouter();
   const shippingFee = total >= 499 ? 0 : 60;
   const grandTotal = total + shippingFee;
+
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push('/cart');
+    }
+  }, [items.length, router]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(checkoutSchema),
@@ -35,7 +42,6 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0) {
-    router.push('/cart');
     return null;
   }
 
