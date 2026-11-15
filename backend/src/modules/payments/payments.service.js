@@ -78,8 +78,7 @@ const paymentsService = {
       ];
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: paymentMethodTypes,
+    const sessionPayload = {
       mode: 'payment',
       line_items,
       customer_email: customerEmail || undefined,
@@ -91,7 +90,9 @@ const paymentsService = {
       },
       success_url: `${FRONTEND_URL}/account/orders?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}&payment=success`,
       cancel_url: `${FRONTEND_URL}/checkout?order_id=${orderId}&payment=cancelled`,
-    });
+    };
+
+    const session = await stripe.checkout.sessions.create(sessionPayload);
 
     // Record payment attempt in Supabase
     try {
@@ -131,7 +132,7 @@ const paymentsService = {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInPaise,
       currency,
-      payment_method_types: paymentMethodTypes,
+      automatic_payment_methods: { enabled: true },
       metadata: {
         order_id: orderId,
         customer_email: customerEmail || '',
