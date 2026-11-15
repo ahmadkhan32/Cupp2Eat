@@ -3,7 +3,8 @@ const ordersService = require('./orders.service');
 module.exports = {
   async placeOrder(req, res, next) {
     try {
-      const result = await ordersService.placeOrder(req.user.id, req.body);
+      const customerId = req.user?.id || null;
+      const result = await ordersService.placeOrder(customerId, req.body);
       res.status(201).json({ success: true, ...result });
     } catch (err) {
       next(err);

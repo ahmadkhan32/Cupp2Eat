@@ -28,7 +28,7 @@ export const addressSchema = z.object({
 
 export const checkoutSchema = addressSchema.extend({
   email: z.string().email(),
-  payment_method: z.enum(['razorpay', 'cod']),
+  payment_method: z.enum(['stripe', 'upi', 'cod', 'netbanking', 'razorpay']),
 });
 
 export const createAdminSchema = z.object({

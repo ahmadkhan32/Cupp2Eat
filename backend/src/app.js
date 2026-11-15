@@ -50,8 +50,10 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Razorpay webhook requires raw body for signature HMAC verification
+// Payment webhooks require raw body for signature verification (Stripe & Razorpay)
 app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/v1/payments/stripe/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/v1/payments/stripe-webhook', express.raw({ type: 'application/json' }));
 
 // Standard body parsers
 app.use(express.json({ limit: '10mb' }));

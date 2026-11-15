@@ -73,7 +73,9 @@ const ordersService = {
       .from('orders')
       .insert({
         order_number: orderNumber,
-        customer_id: customerId,
+        customer_id: customerId || null,
+        guest_email: !customerId ? (shipping_address?.email || null) : null,
+        guest_phone: !customerId ? (shipping_address?.phone || null) : null,
         subtotal,
         shipping_fee: shippingFee,
         discount,
@@ -83,6 +85,7 @@ const ordersService = {
         payment_status: payment_method === 'cod' ? 'pending' : 'pending',
         order_status: payment_method === 'cod' ? 'confirmed' : 'pending',
         shipping_address,
+        billing_address: shipping_address,
         coupon_code,
       })
       .select()
@@ -96,20 +99,25 @@ const ordersService = {
 
     // Generate Invoice record
     const invoiceNumber = `INV-${orderNumber}`;
-    await supabase.from('invoices').insert({
-      order_id: order.id,
-      invoice_number: invoiceNumber,
-      tax_breakdown: {
-        cgst: (total * 0.025).toFixed(2),
-        sgst: (total * 0.025).toFixed(2),
-        total_tax: (total * 0.05).toFixed(2),
-      },
-    });
+    try {
+      await supabase.from('invoices').insert({
+        order_id: order.id,
+        invoice_number: invoiceNumber,
+        subtotal,
+        gst_tax_amount: Number((total * 0.05).toFixed(2)),
+        total,
+        status: 'issued',
+      });
+    } catch (invErr) {
+      console.warn('Invoice insertion warning:', invErr.message);
+    }
 
-    // Clear cart
-    const { data: cart } = await supabase.from('carts').select('id').eq('user_id', customerId).single();
-    if (cart) {
-      await supabase.from('cart_items').delete().eq('cart_id', cart.id);
+    // Clear cart if authenticated
+    if (customerId) {
+      const { data: cart } = await supabase.from('carts').select('id').eq('user_id', customerId).single();
+      if (cart) {
+        await supabase.from('cart_items').delete().eq('cart_id', cart.id);
+      }
     }
 
     return { order, orderNumber, invoiceNumber };

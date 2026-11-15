@@ -43,4 +43,35 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const optionalAuthenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: { user } } = await anonClient.auth.getUser(token);
+
+    if (user) {
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: roleRow } = await adminClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      req.user = {
+        ...user,
+        role: roleRow?.role || user.user_metadata?.role || 'customer',
+      };
+    }
+  } catch (_) {
+    // Ignore error for optional authentication
+  }
+  next();
+};
+
 module.exports = authenticate;
+module.exports.optionalAuthenticate = optionalAuthenticate;
