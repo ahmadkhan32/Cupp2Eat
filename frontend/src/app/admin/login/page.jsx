@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
           .from('user_roles')
           .select('role')
           .eq('user_id', data.user.id)
-          .single();
+          .maybeSingle();
         if (roleData?.role) role = roleData.role;
       } catch (_) {}
 

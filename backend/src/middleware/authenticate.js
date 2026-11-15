@@ -22,13 +22,13 @@ const authenticate = async (req, res, next) => {
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     const { data: profile } = await adminClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     req.user = {
       ...user,
@@ -60,7 +60,7 @@ const optionalAuthenticate = async (req, res, next) => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       req.user = {
         ...user,

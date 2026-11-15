@@ -1,5 +1,7 @@
 const supabase = require('../../config/supabase');
 
+const DEFAULT_CUSTOMER_ID = 'd0b77ee9-0464-4560-9924-3a9753538417';
+
 function generateOrderNumber() {
   const timestamp = Date.now().toString().slice(-6);
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -56,7 +58,7 @@ const ordersService = {
         .select('*')
         .eq('code', coupon_code.toUpperCase())
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (coupon && subtotal >= coupon.min_order_amount) {
         discount =
@@ -68,24 +70,27 @@ const ordersService = {
 
     const total = Math.max(0, subtotal + shippingFee - discount);
     const orderNumber = generateOrderNumber();
+    const resolvedCustomerId = customerId || DEFAULT_CUSTOMER_ID;
 
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .insert({
         order_number: orderNumber,
-        customer_id: customerId || null,
-        guest_email: !customerId ? (shipping_address?.email || null) : null,
-        guest_phone: !customerId ? (shipping_address?.phone || null) : null,
+        customer_id: resolvedCustomerId,
         subtotal,
         shipping_fee: shippingFee,
         discount,
+        tax_amount: Number((total * 0.05).toFixed(2)),
         total,
         currency: 'INR',
         payment_method,
         payment_status: payment_method === 'cod' ? 'pending' : 'pending',
         order_status: payment_method === 'cod' ? 'confirmed' : 'pending',
-        shipping_address,
-        billing_address: shipping_address,
+        shipping_address: {
+          ...shipping_address,
+          email: shipping_address?.email || null,
+          phone: shipping_address?.phone || null,
+        },
         coupon_code,
       })
       .select()
@@ -103,10 +108,13 @@ const ordersService = {
       await supabase.from('invoices').insert({
         order_id: order.id,
         invoice_number: invoiceNumber,
-        subtotal,
-        gst_tax_amount: Number((total * 0.05).toFixed(2)),
-        total,
-        status: 'issued',
+        tax_breakdown: {
+          cgst: Number((total * 0.025).toFixed(2)),
+          sgst: Number((total * 0.025).toFixed(2)),
+          total_tax: Number((total * 0.05).toFixed(2)),
+          subtotal,
+          total,
+        },
       });
     } catch (invErr) {
       console.warn('Invoice insertion warning:', invErr.message);
@@ -114,7 +122,7 @@ const ordersService = {
 
     // Clear cart if authenticated
     if (customerId) {
-      const { data: cart } = await supabase.from('carts').select('id').eq('user_id', customerId).single();
+      const { data: cart } = await supabase.from('carts').select('id').eq('user_id', customerId).maybeSingle();
       if (cart) {
         await supabase.from('cart_items').delete().eq('cart_id', cart.id);
       }

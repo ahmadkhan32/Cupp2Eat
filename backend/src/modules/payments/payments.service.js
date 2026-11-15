@@ -100,7 +100,7 @@ const paymentsService = {
         amount: Number(amount),
         currency: currency.toUpperCase(),
         method: 'stripe',
-        status: 'pending',
+        status: 'created',
         razorpay_order_id: session.id, // Store session ID for lookup
       });
     } catch (dbErr) {

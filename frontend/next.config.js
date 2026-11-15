@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    cpus: 1,
+    workerThreads: false,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,6 +15,14 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'https://backend-rpv5.vercel.app/api/v1/:path*',
+      },
+    ];
   },
   async headers() {
     return [

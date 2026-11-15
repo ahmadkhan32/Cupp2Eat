@@ -82,13 +82,13 @@ const authController = {
       const { user_id, email, full_name } = req.body;
       const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      const { data: existing } = await admin.from('profiles').select('*').eq('id', user_id).single();
+      const { data: existing } = await admin.from('profiles').select('*').eq('id', user_id).maybeSingle();
       if (!existing) {
         await admin.from('profiles').insert({ id: user_id, full_name, email });
         await admin.from('user_roles').insert({ user_id, role: 'customer' });
       }
 
-      const { data: roleRow } = await admin.from('user_roles').select('role').eq('user_id', user_id).single();
+      const { data: roleRow } = await admin.from('user_roles').select('role').eq('user_id', user_id).maybeSingle();
       res.json({ success: true, role: roleRow?.role || 'customer' });
     } catch (err) {
       next(err);

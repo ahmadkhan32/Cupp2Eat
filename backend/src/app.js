@@ -16,6 +16,8 @@ const allowedOrigins = [
   FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:4000',
+  'https://cupp2eat-47a8.vercel.app',
+  'https://backend-rpv5.vercel.app',
   'https://backend-rpv5-git-main-ahmads-projects-3635a9cd.vercel.app',
 ].filter(Boolean);
 

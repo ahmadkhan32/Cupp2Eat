@@ -490,6 +490,12 @@ create policy "Admins full access to shipments" on public.shipments for all usin
 drop policy if exists "Super admins manage roles" on public.user_roles;
 create policy "Super admins manage roles" on public.user_roles for all using (public.is_super_admin(auth.uid()));
 
+drop policy if exists "Users can view own role" on public.user_roles;
+create policy "Users can view own role" on public.user_roles for select using (auth.uid() = user_id);
+
+drop policy if exists "Admins view all roles" on public.user_roles;
+create policy "Admins view all roles" on public.user_roles for select using (public.is_admin(auth.uid()));
+
 -- ==============================================================================
 -- 6. SEED CATALOG DATA (Valid RFC 4122 Hexadecimal UUIDs)
 -- ==============================================================================

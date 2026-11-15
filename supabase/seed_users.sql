@@ -94,6 +94,15 @@ begin
   end if;
 end $$;
 
+-- Step 7: Fix user_roles RLS policies so users can read their own role without 406 error
+alter table if exists public.user_roles enable row level security;
+drop policy if exists "Super admins manage roles" on public.user_roles;
+create policy "Super admins manage roles" on public.user_roles for all using (public.is_super_admin(auth.uid()));
+drop policy if exists "Users can view own role" on public.user_roles;
+create policy "Users can view own role" on public.user_roles for select using (auth.uid() = user_id);
+drop policy if exists "Admins view all roles" on public.user_roles;
+create policy "Admins view all roles" on public.user_roles for select using (public.is_admin(auth.uid()));
+
 -- Step 4: Recreate provisioning function with 100% compliant GoTrue fields
 create or replace function public.create_seed_user(
   user_email text,
@@ -218,3 +227,12 @@ begin
     update auth.users set email_change_token = coalesce(email_change_token, '');
   end if;
 end $$;
+
+-- Step 7: Fix user_roles RLS policies so users can read their own role without 406 error
+alter table if exists public.user_roles enable row level security;
+drop policy if exists "Super admins manage roles" on public.user_roles;
+create policy "Super admins manage roles" on public.user_roles for all using (public.is_super_admin(auth.uid()));
+drop policy if exists "Users can view own role" on public.user_roles;
+create policy "Users can view own role" on public.user_roles for select using (auth.uid() = user_id);
+drop policy if exists "Admins view all roles" on public.user_roles;
+create policy "Admins view all roles" on public.user_roles for select using (public.is_admin(auth.uid()));

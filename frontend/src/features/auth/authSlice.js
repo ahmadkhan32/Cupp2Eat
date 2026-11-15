@@ -13,7 +13,7 @@ export const loginUser = createAsyncThunk('auth/login', async ({ email, password
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
       if (roleRow?.role) role = roleRow.role;
     } catch (_) {}
 
@@ -79,7 +79,7 @@ export const fetchCurrentUser = createAsyncThunk('auth/me', async (_, { rejectWi
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       if (roleRow?.role) role = roleRow.role;
     } catch (_) {}
 
